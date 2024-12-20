@@ -3,17 +3,22 @@
 #include <iostream>
 #include <vector>
 #include <string>
-#include <unordered_map>
+#include <algorithm>
+#include <cmath>
 #include <stack>
+#include <regex>
+#include <sstream>
+#include <unordered_map>
+#include <random>
 
 struct TTEntry {
-    int score;  // Cached score
-    int depth;  // Depth at which the score was computed
-    enum BoundType { EXACT, LOWER, UPPER } flag;  // Type of bound
+    int score;  // cached score
+    int depth;  // depth at which the score was computed
+    enum BoundType { EXACT, LOWER, UPPER } flag;  // bounds
 };
 class TicTacToe {
 private:
-    std::unordered_map<unsigned long long, TTEntry> transpositionTable;  // Transposition table
+    std::unordered_map<unsigned long long, TTEntry> transpositionTable;  // transposition table
     unsigned long long zobristTable[100][100][3];  // Zobrist table for N x N (max 100x100)
     unsigned long long boardHash = 0;
 
@@ -28,6 +33,10 @@ private:
 
     std::string normalizeBoard() const;
 
+    int countLines(int player, int length) const;
+
+    std::vector<std::pair<int, int>> getOrderedMoves(int player);
+
 
     static constexpr int MIN_BOARD_SIZE = 3;
     int boardSizeX;
@@ -39,8 +48,12 @@ private:
     std::string winner;
     std::vector<std::vector<int>> board;
     std::stack<std::pair<int, int>> currentLine;
+    int moveNumber;
+    int currentNode, totalNodes;
 
     std::vector<std::pair<int, int>> previousMoves;
+
+    void resetNodeCounter();
 
     void fillBoard();
 
@@ -56,10 +69,31 @@ private:
 
     void printCurrentLine(int score) const;
 
-    std::vector<std::pair<std::pair<int, int>, int>> getScoredMoves(int player);
+    std::vector<std::pair<std::pair<int, int>, int>> getScoredMoves(int player, std::pair<int, int> prioritizedMove);
 
     int scoreMove(const std::pair<int, int>& move, int player);
 
+    int calculateDepth(int maxDepth);
+
+    int minimax(int depth, bool isMaximizing, int alpha, int beta);
+
+    int evaluatePosition(bool isMaximizing);
+
+    std::vector<std::pair<int, int>> getAvailableMoves();
+
+    bool isLineBlocked(int x, int y, int player);
+
+    bool isStrandedPiece(const std::pair<int, int>& move, int player);
+
+    bool isImmediateThreat(const std::pair<int, int>& move, int opponent);
+
+    int countThreatsBlocked(int x, int y, int opponent);
+
+    void printDebugInfo(int depth, const std::vector<std::pair<int, int>>& moves, int player);
+
+    bool isPotentialWinningLine(const std::vector<std::pair<int, int>>& line, int player);
+
+    int countPotentialWinningLines(int player);
 
 public:
     bool isXTurn;
@@ -74,7 +108,10 @@ public:
         isPositionInvalid(false),
         isDraw(false),
         boardHash(0),
-        winner("") {
+        winner(""),
+        moveNumber(0),
+        currentNode(0),
+        totalNodes(0) {
         if (this->boardSizeX < matchLength || this->boardSizeY < matchLength) {
             throw std::invalid_argument("Invalid match length");
         }
@@ -87,14 +124,16 @@ public:
     std::string ascii() const;
 
     bool isOver() const;
+
     std::string getWinner() const;
+
     bool isDrawGame() const;
 
     void reset();
 
-    int minimax(int depth, bool isMaximizing, int alpha, int beta);
-    int evaluatePosition(bool isMaximizing);
-    std::vector<std::pair<int, int>> getAvailableMoves();
     std::string getResult();
+
     std::pair<int, int> getBestMove(int depth, bool isMaximizing);
+
+    int analyzeLastMove();
 };
